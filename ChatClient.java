@@ -4,6 +4,7 @@ import java.util.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import java.nio.charset.*;
 
 public class ChatClient {
 
@@ -32,7 +33,7 @@ public class ChatClient {
         chatBox.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { try { newMessage(chatBox.getText()); } catch (IOException ex) { } finally { chatBox.setText(""); } } });
         frame.addWindowListener(new WindowAdapter() { public void windowOpened(WindowEvent e) { chatBox.requestFocusInWindow(); } });
         clientSocket = new Socket(server, port);
-        inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8));
         outToServer = new DataOutputStream(clientSocket.getOutputStream());
     }
 
@@ -44,10 +45,9 @@ public class ChatClient {
     public void run() throws IOException {
         Thread thread = new Thread() { @Override
             public void run() {
-                String message;
                 try {
                     while (true) {
-                        message = inFromServer.readLine(); String[] parts = message.split(" ", 3); String action = parts[0];
+                        String message = inFromServer.readLine(); String[] parts = message.split(" ", 3); String action = parts[0];
                         switch (action) {
                             case "OK": printMessage("The command was successful."); break;
                             case "ERROR": printMessage("The command failed."); break;

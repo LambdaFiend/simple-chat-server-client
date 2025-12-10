@@ -13,7 +13,7 @@ public class Server {
     static private HashSet<String> takenNames = new HashSet<String>();
     static private HashMap<String, HashSet<SelectionKey>> rooms = new HashMap<String, HashSet<SelectionKey>>();
     static private HashMap<String, SelectionKey> nameToKey = new HashMap<String, SelectionKey>();
-    static private HashSet<SelectionKey> keysToSendTo = new HashSet<SelectionKey>();
+    static private ArrayList<SelectionKey> keysToSendTo = new ArrayList<SelectionKey>();
     static private boolean messagesToSend;
 
     static public void main(String args[]) throws Exception {
@@ -130,7 +130,10 @@ public class Server {
                         send("OK" + "\n", ci);
                     } else send("ERROR" + "\n", ci);
                 } else if (message.charAt(0) == '/' && splitMessage.length > 2 && splitMessage[0].equals("/priv")) {
-                    if (nameToKey.get(splitMessage[1]) == null) send("ERROR" + "\n", ci); else send("PRIVATE " + ci.nickname + " " + message.split(" ", 3)[2] + "\n", (ClientInfo)(nameToKey.get(splitMessage[1]).attachment()));
+                    if (nameToKey.get(splitMessage[1]) == null) send("ERROR" + "\n", ci); else {
+                        send("PRIVATE " + ci.nickname + " " + message.split(" ", 3)[2] + "\n", (ClientInfo)(nameToKey.get(splitMessage[1]).attachment()));
+                        send("OK" + "\n", ci);
+                    }
                 } else send("ERROR" + "\n", ci);
             } else {
                 if (message.length() > 1 && message.charAt(0) == '/' && message.charAt(1) == '/') {
@@ -161,7 +164,10 @@ public class Server {
                         send("OK" + "\n", ci);
                     } else send("ERROR" + "\n", ci);
                 } else if (message.charAt(0) == '/' && splitMessage.length > 2 && splitMessage[0].equals("/priv")) {
-                    if (nameToKey.get(splitMessage[1]) == null) send("ERROR" + "\n", ci); else send("PRIVATE " + ci.nickname + " " + message.split(" ", 3)[2] + "\n", (ClientInfo)(nameToKey.get(splitMessage[1]).attachment()));
+                    if (nameToKey.get(splitMessage[1]) == null) send("ERROR" + "\n", ci); else {
+                        send("PRIVATE " + ci.nickname + " " + message.split(" ", 3)[2] + "\n", (ClientInfo)(nameToKey.get(splitMessage[1]).attachment()));
+                        send("OK" + "\n", ci);
+                    }
                 } else sendRoom("MESSAGE " + ci.nickname + " " + message + "\n", sk, ci, true);
             }
         }
@@ -173,17 +179,17 @@ public class Server {
     static private void sendRoom(String message, Set<SelectionKey> keys, ClientInfo ci, boolean sendSelf) throws IOException { for (SelectionKey key : rooms.get(ci.room)) if (key.isValid() && !key.isAcceptable() && (sendSelf || key != ci.key)) { ((ClientInfo)key.attachment()).messages.append(message); keysToSendTo.add(key); } }
 
     static private boolean sendFinal(String message, SocketChannel sc) throws IOException {
-        ByteBuffer messageBuffer = ByteBuffer.allocate(message.length()); messageBuffer.clear(); messageBuffer.put(message.getBytes()); messageBuffer.flip();
+        byte[] bytes = message.getBytes(StandardCharsets.UTF_8); ByteBuffer messageBuffer = ByteBuffer.wrap(bytes);
         try { while (messageBuffer.hasRemaining()) sc.write(messageBuffer); } catch (IOException ie) { System.out.println(ie); return false; }
         return true;
     }
 
     static private boolean sendAll() throws IOException {
          for (SelectionKey key : keysToSendTo) {
-             ClientInfo ci = (ClientInfo)key.attachment(); SocketChannel sc = (SocketChannel)key.channel(); StringBuilder messages = ci.messages; int counter = 0; ci.messages = new StringBuilder();
+             ClientInfo ci = (ClientInfo)key.attachment(); SocketChannel sc = (SocketChannel)key.channel(); StringBuilder messages = ci.messages; ci.messages = new StringBuilder(); int counter = 0;
              while (messages.length() > counter * (16384 / 8)) if (!sendFinal(messages.substring(counter * (16384 / 8), Math.min((counter + 1) * (16384 / 8), messages.length())), sc)) return false; else counter++;
          }
-         keysToSendTo = new HashSet<SelectionKey>(); messagesToSend = false;
+         keysToSendTo = new ArrayList<SelectionKey>(); messagesToSend = false;
          return true;
     }
 
