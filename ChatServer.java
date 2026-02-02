@@ -141,10 +141,10 @@ public class Server {
                 } else if (message.charAt(0) == '/' && splitMessage.length == 2) {
                     if (splitMessage[0].equals("/join")) {
                         ci.room = splitMessage[1];
+                        sendRoom("LEFT " + ci.nickname + "\n", sk, ci, false);
                         if (rooms.containsKey(ci.room)) rooms.get(ci.room).add(ci.key); else rooms.put(ci.room, new HashSet<SelectionKey>());
                         rooms.get(ci.room).add(ci.key);
                         send("OK" + "\n", ci);
-                        sendRoom("LEFT " + ci.nickname + "\n", sk, ci, false);
                         sendRoom("JOINED " + ci.nickname + "\n", sk, ci, false);
                     } else if (splitMessage[0].equals("/nick") && !takenNames.contains(splitMessage[1])) {
                         sendRoom("NEWNICK " + ci.nickname + " " + splitMessage[1] + "\n", sk, ci, false);
